@@ -1,199 +1,180 @@
-import React, { ReactNode, createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { User, UserProgress } from '@/lib/types';
+import { storageService } from '@/lib/storage';
 
-// User type
-export interface User {
-  id: number;
+// Interface for login data
+interface LoginData {
   username: string;
-  password?: string; // Only used during authentication, not stored in state
-  points: number;
-  lives: number;
+  password: string;
 }
 
-// Login credentials type
-type LoginData = Pick<User, "username" | "password">;
+// Interface for register data
+interface RegisterData {
+  username: string;
+  password: string;
+}
 
-// Registration data type
-type RegisterData = Pick<User, "username" | "password">;
-
-// Context type definition
+// Authentication context type
 type AuthContextType = {
-  user: Omit<User, "password"> | null;
+  user: User | null;
   isLoading: boolean;
-  error: Error | null;
-  login: (credentials: LoginData) => Promise<Omit<User, "password">>;
+  error: string | null;
+  login: (data: LoginData) => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: RegisterData) => Promise<Omit<User, "password">>;
+  register: (data: RegisterData) => Promise<void>;
   updatePoints: (points: number) => void;
   updateLives: (lives: number) => void;
 };
 
-// Create the context with a default undefined value
+// Create context
 export const AuthContext = createContext<AuthContextType | null>(null);
 
-// Storage key for persisting user data
-const USER_STORAGE_KEY = 'cybercalc_user';
-const USERS_STORAGE_KEY = 'cybercalc_users';
-
-// AuthProvider component
+// Authentication provider component
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<Omit<User, "password"> | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load user from localStorage on initial mount
+  // Initialize auth state on mount
   useEffect(() => {
     try {
-      const storedUser = localStorage.getItem(USER_STORAGE_KEY);
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+      // Initialize demo data if needed
+      storageService.initializeDemoData();
+      
+      // Check if user is logged in
+      const currentUser = storageService.getCurrentUser();
+      if (currentUser) {
+        setUser(currentUser);
       }
     } catch (err) {
-      console.error('Error loading user from localStorage:', err);
+      console.error('Error initializing auth:', err);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Helper to get all registered users from localStorage
-  const getUsers = (): User[] => {
-    try {
-      const storedUsers = localStorage.getItem(USERS_STORAGE_KEY);
-      return storedUsers ? JSON.parse(storedUsers) : [];
-    } catch (err) {
-      console.error('Error loading users from localStorage:', err);
-      return [];
-    }
-  };
-
-  // Helper to save users to localStorage
-  const saveUsers = (users: User[]) => {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-  };
-
   // Login function
-  const login = async (credentials: LoginData): Promise<Omit<User, "password">> => {
+  const login = async (data: LoginData): Promise<void> => {
+    setIsLoading(true);
     setError(null);
     
     try {
-      const users = getUsers();
-      const user = users.find((u) => u.username === credentials.username);
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
       
-      if (!user) {
-        throw new Error('Usuario no encontrado');
+      // Validate credentials
+      const validatedUser = storageService.validateUser(data.username, data.password);
+      
+      if (!validatedUser) {
+        throw new Error('Invalid username or password');
       }
       
-      if (user.password !== credentials.password) {
-        throw new Error('Contraseña incorrecta');
-      }
-      
-      // Omit password from user object before saving to state
-      const { password, ...userWithoutPassword } = user;
-      
-      // Save user to state and localStorage
-      setUser(userWithoutPassword);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userWithoutPassword));
-      
-      return userWithoutPassword;
+      // Set the current user
+      setUser(validatedUser);
+      storageService.setCurrentUser(validatedUser);
     } catch (err) {
-      setError(err as Error);
+      setError(err instanceof Error ? err.message : 'An error occurred during login');
       throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Register function
+  const register = async (data: RegisterData): Promise<void> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check if username already exists
+      const existingUser = storageService.getUserByUsername(data.username);
+      
+      if (existingUser) {
+        throw new Error('Username already exists');
+      }
+      
+      // Validate username and password
+      if (data.username.length < 3) {
+        throw new Error('Username must be at least 3 characters');
+      }
+      
+      if (data.password.length < 6) {
+        throw new Error('Password must be at least 6 characters');
+      }
+      
+      // Create new user
+      const newUser = storageService.createUser(data.username, data.password);
+      
+      // Set as current user
+      setUser(newUser);
+      storageService.setCurrentUser(newUser);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred during registration');
+      throw err;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Logout function
   const logout = async (): Promise<void> => {
-    setError(null);
+    setIsLoading(true);
     
     try {
-      // Remove user from state and localStorage
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Clear current user
       setUser(null);
-      localStorage.removeItem(USER_STORAGE_KEY);
+      storageService.setCurrentUser(null);
     } catch (err) {
-      setError(err as Error);
-      throw err;
-    }
-  };
-
-  // Register function
-  const register = async (data: RegisterData): Promise<Omit<User, "password">> => {
-    setError(null);
-    
-    try {
-      const users = getUsers();
-      
-      // Check if username already exists
-      if (users.some((u) => u.username === data.username)) {
-        throw new Error('El nombre de usuario ya está en uso');
-      }
-      
-      // Create new user with default values
-      const newUser: User = {
-        id: Date.now(), // Simple unique ID
-        username: data.username,
-        password: data.password,
-        points: 0,
-        lives: 3,
-      };
-      
-      // Add user to storage
-      saveUsers([...users, newUser]);
-      
-      // Omit password from user object before saving to state
-      const { password, ...userWithoutPassword } = newUser;
-      
-      // Save user to state and localStorage (for current session)
-      setUser(userWithoutPassword);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(userWithoutPassword));
-      
-      return userWithoutPassword;
-    } catch (err) {
-      setError(err as Error);
-      throw err;
+      console.error('Error during logout:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Update user points
-  const updatePoints = (points: number) => {
+  const updatePoints = (points: number): void => {
     if (!user) return;
     
     try {
-      const updatedUser = { ...user, points };
-      setUser(updatedUser);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      // Update user points
+      storageService.updateUserPoints(user.id, points);
       
-      // Also update in users array
-      const users = getUsers();
-      const updatedUsers = users.map((u) => 
-        u.id === user.id ? { ...u, points } : u
-      );
-      saveUsers(updatedUsers);
+      // Update state
+      setUser(prev => {
+        if (!prev) return null;
+        return { ...prev, points };
+      });
     } catch (err) {
       console.error('Error updating points:', err);
     }
   };
 
   // Update user lives
-  const updateLives = (lives: number) => {
+  const updateLives = (lives: number): void => {
     if (!user) return;
     
     try {
-      const updatedUser = { ...user, lives };
-      setUser(updatedUser);
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(updatedUser));
+      // Update user lives
+      storageService.updateUserLives(user.id, lives);
       
-      // Also update in users array
-      const users = getUsers();
-      const updatedUsers = users.map((u) => 
-        u.id === user.id ? { ...u, lives } : u
-      );
-      saveUsers(updatedUsers);
+      // Update state
+      setUser(prev => {
+        if (!prev) return null;
+        return { ...prev, lives };
+      });
     } catch (err) {
       console.error('Error updating lives:', err);
     }
   };
 
   // Context value
-  const contextValue: AuthContextType = {
+  const value = {
     user,
     isLoading,
     error,
@@ -201,17 +182,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     register,
     updatePoints,
-    updateLives,
+    updateLives
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-// Custom hook to use the auth context
+// Custom hook to use authentication context
 export function useAuth() {
   const context = useContext(AuthContext);
   

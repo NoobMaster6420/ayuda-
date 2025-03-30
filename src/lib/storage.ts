@@ -1,75 +1,16 @@
-// LocalStorage-based data persistence service for GitHub Pages deployment
+import { User, UserProgress, Quiz, Challenge } from './types';
 
-// Types
-export interface User {
-  id: number;
-  username: string;
-  password: string; // Note: In a real app, never store passwords in localStorage
-  points: number;
-  lives: number;
-}
-
-export type UserWithoutPassword = Omit<User, 'password'>;
-
-export interface Quiz {
-  id: number;
-  userId: number;
-  score: number;
-  difficulty: 'easy' | 'medium' | 'hard';
-  completedAt: string;
-}
-
-export interface Challenge {
-  id: number;
-  userId: number;
-  score: number;
-  completedAt: string;
-}
-
-export interface UserProgress {
-  userId: number;
-  points: number;
-  lives: number;
-}
-
-export interface QuizQuestion {
-  id: number;
-  question: string;
-  formula: string;
-  options: {
-    id: string;
-    formula: string;
-  }[];
-  correctOptionId: string;
-  explanation: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-}
-
-export interface ChallengeQuestion {
-  id: number;
-  question: string;
-  formula: string;
-  options: {
-    id: string;
-    formula: string;
-  }[];
-  correctOptionId: string;
-  explanation: string;
-  points: number;
-}
-
-// Storage keys
+// LocalStorage keys
 const STORAGE_KEYS = {
   USERS: 'cybercalc_users',
+  CURRENT_USER: 'cybercalc_current_user',
   QUIZZES: 'cybercalc_quizzes',
   CHALLENGES: 'cybercalc_challenges',
-  CURRENT_USER_ID: 'cybercalc_current_user_id',
-  CURRENT_QUIZ_ID: 'cybercalc_current_quiz_id',
-  CURRENT_CHALLENGE_ID: 'cybercalc_current_challenge_id',
+  USER_PROGRESS: 'cybercalc_user_progress'
 };
 
-// Helper functions
-function getFromStorage<T>(key: string, defaultValue: T): T {
+// Helper methods for localStorage
+const getItem = <T>(key: string, defaultValue: T): T => {
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : defaultValue;
@@ -77,181 +18,274 @@ function getFromStorage<T>(key: string, defaultValue: T): T {
     console.error(`Error retrieving ${key} from localStorage:`, error);
     return defaultValue;
   }
-}
+};
 
-function setToStorage<T>(key: string, value: T): void {
+const setItem = <T>(key: string, value: T): void => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error);
+    console.error(`Error storing ${key} in localStorage:`, error);
   }
-}
+};
 
-// Storage Service
-export class LocalStorage {
-  private users: Map<number, User>;
-  private quizzes: Map<number, Quiz>;
-  private challenges: Map<number, Challenge>;
-  private currentUserId: number;
-  private currentQuizId: number;
-  private currentChallengeId: number;
-
-  constructor() {
-    // Load data from localStorage or initialize empty collections
-    const usersArray = getFromStorage<[number, User][]>(STORAGE_KEYS.USERS, []);
-    const quizzesArray = getFromStorage<[number, Quiz][]>(STORAGE_KEYS.QUIZZES, []);
-    const challengesArray = getFromStorage<[number, Challenge][]>(STORAGE_KEYS.CHALLENGES, []);
+// Storage service for GitHub Pages version
+export const storageService = {
+  // User management
+  getUsers: (): User[] => {
+    return getItem<User[]>(STORAGE_KEYS.USERS, []);
+  },
+  
+  getCurrentUser: (): User | null => {
+    return getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+  },
+  
+  getUserById: (id: number): User | undefined => {
+    const users = storageService.getUsers();
+    return users.find(user => user.id === id);
+  },
+  
+  getUserByUsername: (username: string): User | undefined => {
+    const users = storageService.getUsers();
+    return users.find(user => user.username === username);
+  },
+  
+  createUser: (username: string, password: string): User => {
+    const users = storageService.getUsers();
     
-    this.users = new Map(usersArray);
-    this.quizzes = new Map(quizzesArray);
-    this.challenges = new Map(challengesArray);
+    // Generate user ID
+    const id = Date.now();
     
-    this.currentUserId = getFromStorage<number>(STORAGE_KEYS.CURRENT_USER_ID, 1);
-    this.currentQuizId = getFromStorage<number>(STORAGE_KEYS.CURRENT_QUIZ_ID, 1);
-    this.currentChallengeId = getFromStorage<number>(STORAGE_KEYS.CURRENT_CHALLENGE_ID, 1);
-    
-    // Save initial state if it didn't exist
-    this.saveState();
-  }
-
-  private saveState(): void {
-    setToStorage(STORAGE_KEYS.USERS, Array.from(this.users.entries()));
-    setToStorage(STORAGE_KEYS.QUIZZES, Array.from(this.quizzes.entries()));
-    setToStorage(STORAGE_KEYS.CHALLENGES, Array.from(this.challenges.entries()));
-    setToStorage(STORAGE_KEYS.CURRENT_USER_ID, this.currentUserId);
-    setToStorage(STORAGE_KEYS.CURRENT_QUIZ_ID, this.currentQuizId);
-    setToStorage(STORAGE_KEYS.CURRENT_CHALLENGE_ID, this.currentChallengeId);
-  }
-
-  // User methods
-  async getUser(id: number): Promise<UserWithoutPassword | undefined> {
-    const user = this.users.get(id);
-    if (!user) return undefined;
-    
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
-  }
-
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    for (const user of this.users.values()) {
-      if (user.username === username) {
-        return user;
-      }
-    }
-    return undefined;
-  }
-
-  async createUser(user: Omit<User, 'id' | 'points' | 'lives'>): Promise<UserWithoutPassword> {
-    const id = this.currentUserId++;
-    const newUser: User = { 
-      ...user, 
-      id, 
-      points: 0, 
-      lives: 3 
+    // Create new user
+    const newUser: User = {
+      id,
+      username,
+      points: 0,
+      lives: 3
     };
     
-    this.users.set(id, newUser);
-    this.saveState();
+    // Store password separately in a secure way (hashing would be better in a real app)
+    // For demo purposes we'll store it in localStorage
+    setItem(`user_${id}_password`, password);
     
-    const { password, ...userWithoutPassword } = newUser;
-    return userWithoutPassword;
-  }
-
-  async updateUserPoints(userId: number, points: number): Promise<UserWithoutPassword | undefined> {
-    const user = this.users.get(userId);
-    if (!user) return undefined;
+    // Add user to users list
+    users.push(newUser);
+    setItem(STORAGE_KEYS.USERS, users);
     
-    user.points = points;
-    this.users.set(userId, user);
-    this.saveState();
-    
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
-  }
-
-  async updateUserLives(userId: number, lives: number): Promise<UserWithoutPassword | undefined> {
-    const user = this.users.get(userId);
-    if (!user) return undefined;
-    
-    user.lives = lives;
-    this.users.set(userId, user);
-    this.saveState();
-    
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
-  }
-
-  async getUserProgress(userId: number): Promise<UserProgress | undefined> {
-    const user = this.users.get(userId);
-    if (!user) return undefined;
-    
-    return {
-      userId: user.id,
-      points: user.points,
-      lives: user.lives
+    // Create initial progress for this user
+    const progress: UserProgress = {
+      userId: id,
+      points: 0,
+      lives: 3,
+      completedChallenges: [],
+      completedQuizzes: [],
+      level: 1
     };
-  }
-
-  // Quiz methods
-  async getQuizzesByUserId(userId: number): Promise<Quiz[]> {
-    const userQuizzes: Quiz[] = [];
+    storageService.saveUserProgress(progress);
     
-    for (const quiz of this.quizzes.values()) {
-      if (quiz.userId === userId) {
-        userQuizzes.push(quiz);
-      }
+    return newUser;
+  },
+  
+  validateUser: (username: string, password: string): User | null => {
+    const user = storageService.getUserByUsername(username);
+    
+    if (!user) {
+      return null;
     }
     
-    return userQuizzes;
-  }
-
-  async createQuiz(quiz: Omit<Quiz, 'id'>): Promise<Quiz> {
-    const id = this.currentQuizId++;
+    const storedPassword = getItem<string>(`user_${user.id}_password`, '');
+    
+    return password === storedPassword ? user : null;
+  },
+  
+  setCurrentUser: (user: User | null): void => {
+    setItem(STORAGE_KEYS.CURRENT_USER, user);
+  },
+  
+  updateUserPoints: (userId: number, points: number): User | undefined => {
+    const users = storageService.getUsers();
+    const userIndex = users.findIndex(user => user.id === userId);
+    
+    if (userIndex === -1) {
+      return undefined;
+    }
+    
+    users[userIndex].points = points;
+    setItem(STORAGE_KEYS.USERS, users);
+    
+    // Update current user if this is the current user
+    const currentUser = storageService.getCurrentUser();
+    if (currentUser && currentUser.id === userId) {
+      currentUser.points = points;
+      storageService.setCurrentUser(currentUser);
+    }
+    
+    return users[userIndex];
+  },
+  
+  updateUserLives: (userId: number, lives: number): User | undefined => {
+    const users = storageService.getUsers();
+    const userIndex = users.findIndex(user => user.id === userId);
+    
+    if (userIndex === -1) {
+      return undefined;
+    }
+    
+    users[userIndex].lives = lives;
+    setItem(STORAGE_KEYS.USERS, users);
+    
+    // Update current user if this is the current user
+    const currentUser = storageService.getCurrentUser();
+    if (currentUser && currentUser.id === userId) {
+      currentUser.lives = lives;
+      storageService.setCurrentUser(currentUser);
+    }
+    
+    return users[userIndex];
+  },
+  
+  // User progress management
+  getUserProgress: (userId: number): UserProgress | undefined => {
+    const allProgress = getItem<UserProgress[]>(STORAGE_KEYS.USER_PROGRESS, []);
+    return allProgress.find(progress => progress.userId === userId);
+  },
+  
+  saveUserProgress: (progress: UserProgress): void => {
+    const allProgress = getItem<UserProgress[]>(STORAGE_KEYS.USER_PROGRESS, []);
+    const progressIndex = allProgress.findIndex(p => p.userId === progress.userId);
+    
+    if (progressIndex >= 0) {
+      allProgress[progressIndex] = progress;
+    } else {
+      allProgress.push(progress);
+    }
+    
+    setItem(STORAGE_KEYS.USER_PROGRESS, allProgress);
+  },
+  
+  // Quiz management
+  getQuizzesByUserId: (userId: number): Quiz[] => {
+    const quizzes = getItem<Quiz[]>(STORAGE_KEYS.QUIZZES, []);
+    return quizzes.filter(quiz => quiz.userId === userId);
+  },
+  
+  saveQuiz: (quiz: Omit<Quiz, "id">): Quiz => {
+    const quizzes = getItem<Quiz[]>(STORAGE_KEYS.QUIZZES, []);
+    const id = Date.now();
     const newQuiz: Quiz = { ...quiz, id };
     
-    this.quizzes.set(id, newQuiz);
-    this.saveState();
+    quizzes.push(newQuiz);
+    setItem(STORAGE_KEYS.QUIZZES, quizzes);
+    
+    // Update user progress to mark this quiz as completed
+    const progress = storageService.getUserProgress(quiz.userId);
+    if (progress) {
+      progress.completedQuizzes.push(id);
+      progress.points += quiz.score;
+      
+      // Update user points as well
+      const user = storageService.getUserById(quiz.userId);
+      if (user) {
+        user.points += quiz.score;
+        storageService.updateUserPoints(user.id, user.points);
+      }
+      
+      storageService.saveUserProgress(progress);
+    }
     
     return newQuiz;
-  }
-
-  // Challenge methods
-  async getChallengesByUserId(userId: number): Promise<Challenge[]> {
-    const userChallenges: Challenge[] = [];
+  },
+  
+  // Challenge management
+  getChallengesByUserId: (userId: number): Challenge[] => {
+    const challenges = getItem<Challenge[]>(STORAGE_KEYS.CHALLENGES, []);
+    return challenges.filter(challenge => challenge.userId === userId);
+  },
+  
+  saveChallenge: (challenge: Omit<Challenge, "id">): Challenge => {
+    const challenges = getItem<Challenge[]>(STORAGE_KEYS.CHALLENGES, []);
+    const id = Date.now();
+    const newChallenge: Challenge = { ...challenge, id };
     
-    for (const challenge of this.challenges.values()) {
-      if (challenge.userId === userId) {
-        userChallenges.push(challenge);
+    challenges.push(newChallenge);
+    setItem(STORAGE_KEYS.CHALLENGES, challenges);
+    
+    // Update user progress to mark this challenge as completed
+    if (challenge.completed) {
+      const progress = storageService.getUserProgress(challenge.userId);
+      if (progress) {
+        progress.completedChallenges.push(id);
+        progress.points += challenge.score;
+        
+        // Update user points as well
+        const user = storageService.getUserById(challenge.userId);
+        if (user) {
+          user.points += challenge.score;
+          storageService.updateUserPoints(user.id, user.points);
+        }
+        
+        storageService.saveUserProgress(progress);
       }
     }
     
-    return userChallenges;
-  }
-
-  async createChallenge(challenge: Omit<Challenge, 'id'>): Promise<Challenge> {
-    const id = this.currentChallengeId++;
-    const newChallenge: Challenge = { ...challenge, id };
-    
-    this.challenges.set(id, newChallenge);
-    this.saveState();
-    
     return newChallenge;
-  }
-
-  // Leaderboard methods
-  async getTopUsers(limit: number): Promise<UserWithoutPassword[]> {
-    const allUsers = Array.from(this.users.values());
-    
-    const sortedUsers = allUsers
+  },
+  
+  // Leaderboard
+  getTopUsers: (limit: number = 10): User[] => {
+    const users = storageService.getUsers();
+    return [...users]
       .sort((a, b) => b.points - a.points)
       .slice(0, limit);
+  },
+  
+  // Clear all data (for testing)
+  clearAllData: (): void => {
+    localStorage.removeItem(STORAGE_KEYS.USERS);
+    localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
+    localStorage.removeItem(STORAGE_KEYS.QUIZZES);
+    localStorage.removeItem(STORAGE_KEYS.CHALLENGES);
+    localStorage.removeItem(STORAGE_KEYS.USER_PROGRESS);
     
-    return sortedUsers.map(user => {
-      const { password, ...userWithoutPassword } = user;
-      return userWithoutPassword;
+    // Also remove all user passwords
+    const users = storageService.getUsers();
+    users.forEach(user => {
+      localStorage.removeItem(`user_${user.id}_password`);
     });
+  },
+  
+  // Demo data initialization (for testing)
+  initializeDemoData: (): void => {
+    // Only initialize if no data exists
+    if (storageService.getUsers().length === 0) {
+      // Create some demo users
+      const users: User[] = [
+        { id: 101, username: 'alice', points: 230, lives: 3 },
+        { id: 102, username: 'bob', points: 180, lives: 2 },
+        { id: 103, username: 'charlie', points: 320, lives: 3 },
+        { id: 104, username: 'diana', points: 150, lives: 1 },
+        { id: 105, username: 'edward', points: 270, lives: 3 }
+      ];
+      
+      // Set passwords
+      users.forEach(user => {
+        setItem(`user_${user.id}_password`, 'password');
+      });
+      
+      // Save users
+      setItem(STORAGE_KEYS.USERS, users);
+      
+      // Create progress for each user
+      users.forEach(user => {
+        const progress: UserProgress = {
+          userId: user.id,
+          points: user.points,
+          lives: user.lives,
+          completedChallenges: [],
+          completedQuizzes: [],
+          level: Math.ceil(user.points / 100) + 1
+        };
+        storageService.saveUserProgress(progress);
+      });
+    }
   }
-}
-
-// Create and export a singleton instance
-export const storage = new LocalStorage();
+};

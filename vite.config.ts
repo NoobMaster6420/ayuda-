@@ -1,36 +1,18 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: './', // Use relative paths for GitHub Pages
+  base: '/cybercalc/', // Ajustar al nombre del repositorio de GitHub
   resolve: {
     alias: {
-      '@': resolve(__dirname, './src'),
-      '@components': resolve(__dirname, './src/components'),
-      '@pages': resolve(__dirname, './src/pages'),
-      '@hooks': resolve(__dirname, './src/hooks'),
-      '@lib': resolve(__dirname, './src/lib'),
-      '@assets': resolve(__dirname, './src/assets'),
+      '@': path.resolve(__dirname, './src'),
     },
   },
   build: {
     outDir: 'dist',
-    emptyOutDir: true,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          react: ['react', 'react-dom'],
-          katex: ['katex'],
-        },
-      },
-    },
+    sourcemap: true,
   },
-  css: {
-    modules: {
-      localsConvention: 'camelCaseOnly',
-    },
-  }
-})
+});

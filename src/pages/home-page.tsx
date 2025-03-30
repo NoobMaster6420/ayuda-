@@ -1,195 +1,112 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { Latex } from '../components/ui/latex';
-import { useAuth } from '../hooks/use-auth';
+import { useAuth } from '@/hooks/use-auth';
+import { initializeLeaderboardIfEmpty } from '@/lib/storage';
 
 export default function HomePage() {
   const { user } = useAuth();
+  const [loaded, setLoaded] = useState(false);
   
+  // Inicializar datos si es necesario
+  useEffect(() => {
+    initializeLeaderboardIfEmpty();
+    setLoaded(true);
+  }, []);
+
+  if (!loaded) {
+    return <div>Cargando...</div>;
+  }
+
   return (
-    <div className="w-full">
+    <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gray-900 py-24">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-purple-900/20"></div>
-          <div className="absolute inset-0 bg-grid-white/[0.05] bg-grid-repeat-[100px]"></div>
-        </div>
-        
-        <div className="container relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-2 lg:gap-8">
-            <div className="flex flex-col justify-center space-y-8">
-              <div>
-                <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl">
-                  <span className="block text-cyberpink glow-text-cyberpink">CYBER</span>
-                  <span className="block text-cyberblue glow-text-cyberblue">CALC</span>
-                </h1>
-                <p className="mt-3 text-lg text-gray-300 sm:mt-5 sm:text-xl">
-                  Transformando el aprendizaje del cálculo con una experiencia digital interactiva y gamificada.
-                </p>
-              </div>
-              
-              <div className="flex flex-wrap gap-4">
-                {user ? (
-                  <Link href="/theory">
-                    <a className="transform rounded-lg bg-cyberpink px-6 py-3 text-lg font-medium text-white shadow-lg transition duration-300 ease-in-out hover:scale-105 hover:bg-opacity-90">
-                      Comenzar a Aprender
-                    </a>
-                  </Link>
-                ) : (
-                  <Link href="/auth">
-                    <a className="transform rounded-lg bg-cyberpink px-6 py-3 text-lg font-medium text-white shadow-lg transition duration-300 ease-in-out hover:scale-105 hover:bg-opacity-90">
-                      Crear Cuenta
-                    </a>
-                  </Link>
-                )}
-                
-                <Link href="/theory">
-                  <a className="transform rounded-lg border border-gray-700 bg-gray-800 px-6 py-3 text-lg font-medium text-white shadow-lg transition duration-300 ease-in-out hover:scale-105 hover:bg-gray-700">
-                    Explorar
-                  </a>
-                </Link>
-              </div>
+      <section className="bg-gradient-to-b from-primary to-primary-700 text-white py-20">
+        <div className="container mx-auto px-6 text-center">
+          <h1 className="text-4xl md:text-5xl font-bold mb-6">
+            Domina el Cálculo Diferencial con CyberCalc
+          </h1>
+          <p className="text-xl mb-10 max-w-3xl mx-auto">
+            Una forma innovadora y entretenida de aprender derivadas a través de desafíos, juegos y conceptos teóricos.
+          </p>
+          {user ? (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/theory">
+                <a className="px-6 py-3 bg-white text-primary font-medium rounded-lg hover:bg-gray-100 transition-colors">
+                  Comenzar a aprender
+                </a>
+              </Link>
+              <Link href="/quiz">
+                <a className="px-6 py-3 bg-primary-600 text-white font-medium rounded-lg hover:bg-primary-500 transition-colors">
+                  Probar tus conocimientos
+                </a>
+              </Link>
             </div>
-            
-            <div className="flex items-center justify-center">
-              <div className="h-full w-full max-w-md rounded-lg border border-gray-800 bg-gray-900 bg-opacity-80 p-8 shadow-2xl backdrop-blur">
-                <div className="space-y-6">
-                  <h3 className="text-xl font-bold text-white">Resolviendo derivadas con estilo</h3>
-                  <div className="border-l-4 border-cyberpink bg-gray-800 bg-opacity-50 p-4">
-                    <Latex formula={`f(x) = x^3 - 2x^2 + 5x - 3`} className="mb-3" />
-                    <Latex formula={`f'(x) = 3x^2 - 4x + 5`} className="text-cyberblue" />
-                  </div>
-                  
-                  <p className="text-gray-300">
-                    Domina el cálculo diferencial paso a paso con nuestra plataforma interactiva y gamificada.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          ) : (
+            <Link href="/auth">
+              <a className="px-6 py-3 bg-white text-primary font-medium rounded-lg hover:bg-gray-100 transition-colors">
+                Crear una cuenta
+              </a>
+            </Link>
+          )}
         </div>
       </section>
-      
-      {/* Features */}
-      <section className="bg-gray-900 py-16">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-              Características Principales
-            </h2>
-            <p className="mx-auto mt-3 max-w-2xl text-lg text-gray-300 sm:mt-4">
-              Una nueva forma de aprender cálculo diferencial con herramientas digitales diseñadas para todos los niveles.
-            </p>
-          </div>
+
+      {/* Features Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-6">
+          <h2 className="text-3xl font-bold text-center mb-12">¿Por qué CyberCalc?</h2>
           
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {/* Feature 1 */}
-            <div className="rounded-lg border border-gray-800 bg-gray-800 bg-opacity-50 p-6 transition-transform duration-300 hover:scale-105">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-cyberpink bg-opacity-20 text-cyberpink">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Teoría Interactiva</h3>
-              <p className="mt-2 text-gray-300">
-                Aprende los conceptos fundamentales del cálculo con ejemplos interactivos y visualizaciones.
-              </p>
-            </div>
-            
-            {/* Feature 2 */}
-            <div className="rounded-lg border border-gray-800 bg-gray-800 bg-opacity-50 p-6 transition-transform duration-300 hover:scale-105">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-cyberblue bg-opacity-20 text-cyberblue">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Quizzes Adaptativos</h3>
-              <p className="mt-2 text-gray-300">
-                Pon a prueba tus conocimientos con quizzes que se adaptan a tu nivel de comprensión.
-              </p>
-            </div>
-            
-            {/* Feature 3 */}
-            <div className="rounded-lg border border-gray-800 bg-gray-800 bg-opacity-50 p-6 transition-transform duration-300 hover:scale-105">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-purple-500 bg-opacity-20 text-purple-500">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Desafíos Diarios</h3>
-              <p className="mt-2 text-gray-300">
-                Mantén tus habilidades afiladas con desafíos diarios que aumentan en dificultad.
-              </p>
-            </div>
-            
-            {/* Feature 4 */}
-            <div className="rounded-lg border border-gray-800 bg-gray-800 bg-opacity-50 p-6 transition-transform duration-300 hover:scale-105">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-green-500 bg-opacity-20 text-green-500">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Análisis de Progreso</h3>
-              <p className="mt-2 text-gray-300">
-                Visualiza tu progreso a través del tiempo y descubre tus áreas de mejora.
-              </p>
-            </div>
-            
-            {/* Feature 5 */}
-            <div className="rounded-lg border border-gray-800 bg-gray-800 bg-opacity-50 p-6 transition-transform duration-300 hover:scale-105">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-yellow-500 bg-opacity-20 text-yellow-500">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Modo Práctica</h3>
-              <p className="mt-2 text-gray-300">
-                Practica sin presión con ejercicios ilimitados en todos los temas del cálculo.
-              </p>
-            </div>
-            
-            {/* Feature 6 */}
-            <div className="rounded-lg border border-gray-800 bg-gray-800 bg-opacity-50 p-6 transition-transform duration-300 hover:scale-105">
-              <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-md bg-red-500 bg-opacity-20 text-red-500">
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white">Modo Juego</h3>
-              <p className="mt-2 text-gray-300">
-                Aprende jugando y compite con otros estudiantes en nuestra tabla de clasificación.
-              </p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <FeatureCard 
+              icon="📚" 
+              title="Aprendizaje Interactivo" 
+              description="Teoría explicada de forma clara con ejemplos prácticos y visualizaciones interactivas."
+            />
+            <FeatureCard 
+              icon="🎮" 
+              title="Aprender Jugando" 
+              description="Desafíos y juegos que hacen el aprendizaje del cálculo diferencial divertido y efectivo."
+            />
+            <FeatureCard 
+              icon="🏆" 
+              title="Seguimiento de Progreso" 
+              description="Sistema de puntos y tabla de clasificación para motivar tu avance y compararte con otros."
+            />
           </div>
         </div>
       </section>
-      
-      {/* Call to Action */}
-      <section className="bg-gray-900 py-16">
-        <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="overflow-hidden rounded-xl bg-gradient-to-r from-cyberpink to-cyberblue p-0.5 shadow-lg">
-            <div className="bg-gray-900 px-6 py-12 sm:px-12 sm:py-16">
-              <div className="text-center">
-                <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-                  Listo para comenzar tu viaje en el mundo del cálculo?
-                </h2>
-                <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-300">
-                  Únete a miles de estudiantes que están transformando su manera de aprender cálculo diferencial.
-                </p>
-                <div className="mt-8 flex justify-center">
-                  <div className="inline-flex rounded-md shadow">
-                    <Link href={user ? "/theory" : "/auth"}>
-                      <a className="rounded-lg bg-cyberpink px-6 py-3 text-lg font-medium text-white hover:bg-opacity-90">
-                        {user ? "Ir a la Teoría" : "Comenzar ahora"}
-                      </a>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-6 text-center">
+          <h2 className="text-3xl font-bold mb-6">¿Listo para dominar el cálculo?</h2>
+          <p className="text-gray-600 mb-10 max-w-2xl mx-auto">
+            Únete a miles de estudiantes que han mejorado su comprensión del cálculo diferencial con nuestro enfoque interactivo.
+          </p>
+          
+          <Link href={user ? "/quiz" : "/auth"}>
+            <a className="px-8 py-4 bg-primary text-white font-medium rounded-lg hover:bg-primary-600 transition-colors">
+              {user ? "Comenzar desafío" : "Comenzar ahora"}
+            </a>
+          </Link>
         </div>
       </section>
+    </div>
+  );
+}
+
+interface FeatureCardProps {
+  icon: string;
+  title: string;
+  description: string;
+}
+
+function FeatureCard({ icon, title, description }: FeatureCardProps) {
+  return (
+    <div className="bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition-shadow">
+      <div className="text-4xl mb-4">{icon}</div>
+      <h3 className="text-xl font-semibold mb-3">{title}</h3>
+      <p className="text-gray-600">{description}</p>
     </div>
   );
 }
